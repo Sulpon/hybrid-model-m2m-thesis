@@ -18,6 +18,13 @@ _m2m.txt
 *.pptx
 
 # ---------------------------------------------------------------------------
+# Superseded exploratory scripts and their outputs. Folded into case_study_1.py
+# and case_study_2.py, which reproduce every reported number bit-for-bit. Kept
+# on disk locally, out of the repo.
+# ---------------------------------------------------------------------------
+_archive/
+
+# ---------------------------------------------------------------------------
 # Local artefacts
 # ---------------------------------------------------------------------------
 __pycache__/

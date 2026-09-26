@@ -45,38 +45,49 @@ Full write-up: **`Thesis_TwoCaseStudy_Report.pdf`** (9 pages, 7 figures).
 
 ## Layout
 
+Two scripts, one per case study, each self-contained and stage-based.
+
 ```
-Data Generation.py / KD_fit.py     case study 1 data + kinetic fits
-sopls_*.py                         SO-PLS orderings, two-block runs, commonality
-metric_*.py                        the ratio, its LV distribution, flat regions
-q2_flat_region_comparison.py       cost of widening the 1-SE region
-iterative_prediction.py            rolling forecast / extrapolation test
-shared_vs_ranking.py               does the shared term carry ranking information?
+case_study_1.py       two-stage batch reactor, 7 candidate mechanisms
+    commonality         u_M / u_X / shared and the modified ratio      [dataset C]
+    flatregion          ratio distribution over the 1/2/3-SE regions   [dataset A]
+    q2cost              what each stopping rule costs in Q2            [dataset A]
+    rolling             iterative prediction + domain extrapolation    [dataset C]
 
-urethane_case_study.py             urethane process model and batch sampling
-urethane_authors_replicate.py      the authors' model, ported and validated
-urethane_digitise_figure.py        recovers their published curves from the PNG
-urethane_compare_figure.py         published vs reconstruction, with noise
-urethane_fit_feeds.py              recovers the unpublished feed programme
-urethane_m2m_corrected.py          M2M with corrected sigma and charge
-urethane_m2m_blockvariants.py      the two paper-faithful block layouts
+case_study_2.py       urethane semi-batch reactor, 2 models
+    replicate           reproduce the authors' published mole profiles
+    compare             published vs reconstruction + noise-seed test
+    feeds               re-derive the unpublished feed programme (slow)
+    m2m                 the M2M comparison, both block layouts
 
-build_report_figures.py            figures for the report
-build_two_case_report.py           builds the PDF
+build_report_figures.py   figures for the report
+build_two_case_report.py  builds Thesis_TwoCaseStudy_Report.pdf
+regen_corrected_data.py / Data_Generation_corrected.py
+                          regenerate the case study 1 RG_*.xlsx data
 ```
 
-Results are saved as `.xlsx` workbooks next to the scripts. The report reads
-its numbers back from those workbooks at build time rather than having them
-retyped, so it cannot drift from the analyses.
+Case study 1 deliberately carries **two datasets**, because both are still in
+use and they do not agree on the ranking of the seven mechanisms — that
+disagreement is itself a reported finding:
+
+| | source | used by |
+|---|---|---|
+| A "original" | `X1/X2/Y/M2.xlsx` (+ `_mis` for M6), parameters hard-coded | `flatregion`, `q2cost` |
+| C "regenerated" | `RG_*.xlsx`, corrected sigma and paper-style stage-2 ICs | `commonality`, `rolling` |
 
 ## Reproducing
 
 ```bash
-python shared_vs_ranking.py            # case study 1 commonality
-python urethane_m2m_blockvariants.py   # case study 2, both block layouts
+python case_study_1.py                 # commonality + flatregion + q2cost
+python case_study_1.py rolling         # extrapolation test (~90 s)
+python case_study_2.py                 # replicate + compare + m2m
 python build_report_figures.py         # figures
 python build_two_case_report.py        # the PDF
 ```
+
+Results are written as `case_study_*.xlsx`. The report reads its numbers back
+from those workbooks at build time rather than having them retyped, so it
+cannot drift from the analyses.
 
 Requires `numpy`, `pandas`, `scipy`, `scikit-learn`, `matplotlib`, `openpyxl`,
 `reportlab`, `pillow`. The urethane scripts integrate with `scipy.solve_ivp`

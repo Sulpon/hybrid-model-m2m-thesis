@@ -21,7 +21,7 @@ SHORT = lambda s: s.replace('_correct', '').replace('_no_side', '').replace('_or
 
 
 def fig1_commonality():
-    d = pd.read_excel('shared_vs_ranking.xlsx').set_index('model').sort_values('fit_cost')
+    d = pd.read_excel('case_study_1_commonality.xlsx').set_index('model').sort_values('fit_cost')
     lab = [SHORT(m) for m in d.index]
     x = np.arange(len(d))
     fig, ax = plt.subplots(figsize=(8.6, 4.0))
@@ -42,7 +42,7 @@ def fig1_commonality():
 
 
 def fig2_metric_vs_quality():
-    d = pd.read_excel('shared_vs_ranking.xlsx').set_index('model')
+    d = pd.read_excel('case_study_1_commonality.xlsx').set_index('model')
     fig, ax = plt.subplots(1, 2, figsize=(9.4, 3.9))
     for a, (xc, xl, logx) in zip(ax, [('fit_cost', 'kinetic fit cost  (lower = better mechanism)', True),
                                       ('roll_R2e', 'rolling extrapolation $R^2$', False)]):
@@ -63,7 +63,7 @@ def fig2_metric_vs_quality():
 
 
 def fig3_flat_region():
-    d = pd.read_excel('metric_ratio_flat_regions.xlsx')
+    d = pd.read_excel('case_study_1_flat_regions.xlsx')
     regions = ['1-SE', '2-SE', '3-SE', 'full grid']
     models = sorted(d.model.unique())
     fig, ax = plt.subplots(figsize=(9.0, 4.0))
@@ -85,7 +85,7 @@ def fig3_flat_region():
 
 
 def fig4_q2_cost():
-    d = pd.read_excel('q2_flat_region_comparison.xlsx')
+    d = pd.read_excel('case_study_1_q2_cost.xlsx')
     order = ['argmin (full)', '1-SE', '2-SE', '3-SE']   # argmin = unpenalised baseline
     order = [r for r in order if r in set(d.rule)]
     models = sorted(d.model.unique())
@@ -107,7 +107,7 @@ def fig4_q2_cost():
 
 
 def fig5_rolling():
-    d = pd.read_excel('iterative_prediction.xlsx', sheet_name='rmsep_by_k')
+    d = pd.read_excel('case_study_1_rolling.xlsx', sheet_name='rmsep_by_k')
     d = d[d.method == 'SO-PLS-offlineCal']
     fig, ax = plt.subplots(1, 2, figsize=(9.4, 3.9), sharey=True)
     for a, reg, ti in zip(ax, ['within', 'extrap'],
@@ -124,7 +124,7 @@ def fig5_rolling():
 
 
 def fig6_urethane_m2m():
-    d = pd.read_excel('urethane_m2m_blockvariants.xlsx')
+    d = pd.read_excel('case_study_2_results.xlsx')
     d = d[(d.variant == 'V1_static') & (d.param == 70.0)]
     fig, ax = plt.subplots(1, 3, figsize=(11.6, 3.8))
 

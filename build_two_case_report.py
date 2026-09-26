@@ -79,12 +79,11 @@ def table(data, widths=None, align=None, fs=8.2):
 SHORT = lambda s: s.split('_')[0]
 
 # ============================================================ load the results
-cs1 = pd.read_excel('shared_vs_ranking.xlsx').set_index('model')
-q2f = pd.read_excel('q2_flat_region_comparison.xlsx')
-itr = pd.read_excel('iterative_prediction.xlsx', sheet_name='summary').set_index('model')
-frg = pd.read_excel('metric_ratio_flat_regions.xlsx')
-cm = pd.read_excel('sopls_commonality.xlsx').set_index('model')
-bv = pd.read_excel('urethane_m2m_blockvariants.xlsx')
+cs1 = pd.read_excel('case_study_1_commonality.xlsx').set_index('model')
+q2f = pd.read_excel('case_study_1_q2_cost.xlsx')
+itr = pd.read_excel('case_study_1_rolling.xlsx', sheet_name='summary').set_index('model')
+frg = pd.read_excel('case_study_1_flat_regions.xlsx')
+bv = pd.read_excel('case_study_2_results.xlsx')
 v1 = bv[(bv.variant == 'V1_static') & (bv.param == 70.0)].set_index(['response', 'model'])
 v2 = bv[(bv.variant == 'V2_rolling') & (bv.param == 15.0)].set_index(['response', 'model'])
 
@@ -319,7 +318,7 @@ P('The authors&rsquo; input workbook is not in their archive, so the charge and 
   'directly off their own panel, the initial moles and volume read at t = 0, the feed totals from '
   'the closing material balances, and the feed solvent from the volume shortfall. Only the two '
   'feed ramps &mdash; which the notebooks never plot &mdash; had to be fitted.')
-figure('urethane_compare_published.png',
+figure('cs2_compare_published.png',
        'Figure 6 — Published trajectories (recovered from the authors’ stored figure) against the '
        'reconstruction, both carrying measurement noise. Overall RMS deviation 5.0 % of each '
        'panel’s range: nB 1.6 %, nE 3.5 %, V 4.0 %, nD 4.1 %, nC 5.8 %, nA 8.4 %.')
