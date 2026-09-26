@@ -1,0 +1,28 @@
+# ---------------------------------------------------------------------------
+# Third-party material -- not ours to redistribute, even privately.
+# The urethane authors' notebooks arrived in "Urethane case study.zip" and the
+# two-stage reactor notebook is the M2M paper authors' own. The analysis
+# scripts here reproduce their models from published values; the originals
+# stay out of version control.
+# ---------------------------------------------------------------------------
+urethane_authors_tmp/
+filesz_extracted/
+*.zip
+*.ipynb
+_m2m.txt
+
+# ---------------------------------------------------------------------------
+# Drafts, slides and meeting notes -- unpublished thesis material
+# ---------------------------------------------------------------------------
+*.docx
+*.pptx
+
+# ---------------------------------------------------------------------------
+# Local artefacts
+# ---------------------------------------------------------------------------
+__pycache__/
+*.pyc
+*.log
+*.pkl
+*.bak
+desktop.ini
