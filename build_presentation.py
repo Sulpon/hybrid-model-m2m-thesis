@@ -329,9 +329,44 @@ note(s, 'Because Q² is cross-validated, uₘ and uₓ are out-of-sample '
         'gains — not in-sample fit.')
 pagenum(s, 7)
 
-# ================================================== 8 CS1 results — the table
-s = slide(); y = title(s, 'Case study 1 — seven candidate mechanisms',
-                       'Four sound structures, three deliberately broken. The metric was not told which is which.')
+# =========================================== 8 how the seven models were built
+s = slide(); y = title(s, 'Case study 1 — how the seven candidates were built',
+                       'Graded misspecification. All seven fit the calibration data almost equally well — that is the whole problem.')
+card(s, 0.62, y, 12.1, 0.62, RGBColor(0xE8, 0xEE, 0xF7))
+tf = tb(s, 0.9, y+0.13, 11.6, 0.4)
+put(tf, 'TRUE STAGE 2:      B + 2D → E,  rate = k₃·C_B·C_D²          '
+        'C + 2D → F,  rate = k₄·C_C·C_D²',
+    14, True, NAVY, space_after=0, first=True)
+
+rows = [['model', 'what was broken', 'r₃', 'r₄', 'fit cost'],
+        ['M0  correct', 'nothing — the reference', 'k₃·C_B·C_D²', 'k₄·C_C·C_D²', '2.0e5'],
+        ['M3  wrong Ea4', 'the two activation energies tied together', 'k₃·C_B·C_D²', 'k₄(Ea₃)·C_C·C_D²', '2.1e5'],
+        ['M4  lumped E/F', 'one rate constant serves both reactions', 'k₃·C_B·C_D²', 'k₃·C_C·C_D²', '9.8e5'],
+        ['M2  order-1 in D', 'reaction order in D cut from 2 to 1', 'k₃·C_B·C_D', 'k₄·C_C·C_D', '1.4e6'],
+        ['M1  no side rxn', 'the impurity channel deleted', 'k₃·C_B·C_D²', '—', '2.9e6'],
+        ["M6  authors' mis.", 'impurity deleted AND order-1 in D', 'k₃·C_B·C_D', '—', '3.8e6'],
+        ['M5  no D dep.', 'D dropped from both rate laws', 'k₃·C_B', 'k₄·C_C', '1.1e7']]
+hl = {1: GOOD, 2: GOOD, 3: GOOD, 4: GOOD, 5: BAD, 6: BAD, 7: BAD}
+table(s, rows, 0.62, y+0.72, 12.1, 2.5,
+      colw=[2.3, 4.1, 2.15, 2.15, 1.4], fs=11.5, headfs=11.5, hl=hl)
+
+tf = tb(s, 0.62, y+3.36, 12.1, 1.75)
+put(tf, 'Why build them this way?', 14.5, True, NAVY, space_after=7, first=True)
+put(tf, 'All seven reach Q² = 87.8 – 90.4 %. In-domain fit cannot tell them '
+        'apart — if it could, no metric would be needed.', 13.5, bullet=True, space_after=6)
+put(tf, 'They span parameter errors (M3, M4), rate-law errors (M2, M5) and '
+        'structural deletions (M1, M6). M6 reproduces the original paper’s own '
+        'misspecification, giving an external reference point.', 13.5, bullet=True, space_after=6)
+put(tf, 'Each carries an independent quality grade — the kinetic fit cost above '
+        '— so the metric is checked against an oracle, not against intuition.',
+    13.5, bullet=True, space_after=0)
+note(s, 'Green = reaction network intact (only parameters or orders wrong).   '
+        'Red = network destroyed (a channel deleted, or the D dependence removed).')
+pagenum(s, 8)
+
+# ================================================== 9 CS1 results — the table
+s = slide(); y = title(s, 'Case study 1 — the result',
+                       'The metric was never told which candidates were broken.')
 rows = [['model', 'Q² full', 'Q² no-M', 'Q² no-X', 'uₘ', 'uₓ',
          'M2M*', '± sd', 'P(>1)']]
 hl = {}
@@ -346,19 +381,20 @@ table(s, rows, 0.62, y, 12.1, 3.1,
 tf = tb(s, 0.62, y+3.4, 12.1, 1.5)
 put(tf, 'Sound mechanisms land at 1.96 – 2.11.   Broken ones at 0.37, 0.70 and 1.16.',
     17, True, NAVY, space_after=9, first=True)
-put(tf, 'The gap between 1.96 and 1.16 is clean, and the last column says how '
-        'often the ratio exceeded 1 across the 20 seeds — always for the sound '
-        'models, never for M1 and M5.', 14, space_after=0)
+put(tf, 'The split is exactly the one the construction predicts: every candidate '
+        'that keeps the reaction network intact scores ~2, every candidate that '
+        'destroys it falls to 1 or below. Last column = P(ratio > 1) over 20 seeds.',
+    14, space_after=0)
 note(s, 'All Q² values in percent, averaged over 20 cross-validation seeds. '
         'M6 is the misspecification used in the original paper.')
-pagenum(s, 8)
+pagenum(s, 9)
 
 # ====================================================== 9 CS1 figure
 s = slide(); y = title(s, 'The same result, read off a single threshold')
 pic(s, 'deck_cs1_ratio.png', 1.32, y-0.05, w=10.7)
 note(s, 'Error bars are ± 1 sd over 20 cross-validation seeds. No sound '
         'model’s interval reaches 1; M1 and M5 never approach it.', y=H-0.62)
-pagenum(s, 9)
+pagenum(s, 10)
 
 # ====================================================== 10 why it separates
 s = slide(); y = title(s, 'Why it separates',
@@ -368,7 +404,7 @@ tf = tb(s, 0.62, y+4.55, 12.1, 0.95)
 put(tf, 'uₘ barely moves (10 – 13 %). It is uₓ that gives the game away: '
         '~6 % when the physics is right, 16 – 27 % when it is not.',
     15, True, NAVY, space_after=0, first=True)
-pagenum(s, 10)
+pagenum(s, 11)
 
 # ====================================================== 11 original vs modified
 s = slide(); y = title(s, 'Original vs modified, side by side')
@@ -377,7 +413,7 @@ tf = tb(s, 0.62, y+4.45, 12.1, 0.95)
 put(tf, 'Both rank the models. Only the right-hand scale tells you, from one '
         'number, whether a mechanism is worth keeping.', 15, True, NAVY,
     space_after=0, first=True)
-pagenum(s, 11)
+pagenum(s, 12)
 
 # ====================================================== 12 pros and cons
 s = slide(); y = title(s, 'Why this is better — and where it is fragile')
@@ -414,7 +450,7 @@ put(tf, 'Needs a companion statistic. Report coverage = (uₘ+uₓ)/joint '
     13.5, bullet=True, space_after=8)
 put(tf, 'Seven and two candidates only — rank correlations are indicative, '
         'not established.', 13.5, bullet=True, space_after=0)
-pagenum(s, 12)
+pagenum(s, 13)
 
 # ====================================================== 13 CS2 process
 s = slide(); y = title(s, 'Case study 2 — an independent test',
@@ -444,7 +480,7 @@ put(tf, 'U1   the available first-principles model, reverse step absent   '
 put(tf, 'Sanity check on the pipeline:  U0 recovers the true kinetics almost '
         'exactly (kᵣₑₑ₁ 0.001249 vs 1.25e-3), while U1’s fit cost is five '
         'orders of magnitude worse — 1.22e8 against 1964.', 14, space_after=0)
-pagenum(s, 13)
+pagenum(s, 14)
 
 # ====================================================== 14 CS2 data + blocks
 s = slide(); y = title(s, 'Case study 2 — data and blocks',
@@ -462,7 +498,7 @@ put(tf, 'BLOCKS', 12, True, NAVY, BODY, 8)
 put(tf, 'M  = ODE states + input programme', 13, space_after=4)
 put(tf, 'X  = measured C, D, E on the same grid', 13, space_after=4)
 put(tf, 'Y  = final n_C or n_D, outside that grid', 13, space_after=0)
-pagenum(s, 14)
+pagenum(s, 15)
 
 # ====================================================== 15 CS2 results
 s = slide(); y = title(s, 'Case study 2 — the result',
@@ -477,7 +513,7 @@ put(tf, f'n_C:   U0 = {r("nC","U0_correct","M2M_mod"):.2f}   vs   '
     16, True, NAVY, space_after=6, first=True)
 put(tf, 'The original ratio ranks them the same way but puts BOTH above 1 '
         '(235 vs 2.1) — an ordering, not a verdict.', 14, space_after=0)
-pagenum(s, 15)
+pagenum(s, 16)
 
 # ====================================================== 16 conclusions
 s = slide(); y = title(s, 'Where this stands')
@@ -504,7 +540,7 @@ put(tf, 'Obtain the urethane authors’ input workbook — turns case study 2 '
 put(tf, 'A defensible rule for “uₓ too small to divide by”, based on its '
         'own CV standard error', 13.5, bullet=True, space_after=6)
 put(tf, 'Write up — target: a methods paper', 13.5, bullet=True, space_after=0)
-pagenum(s, 16)
+pagenum(s, 17)
 
 # ====================================================== 17 backup
 s = slide(); y = title(s, 'Backup — why two versions of the table exist',
@@ -523,7 +559,7 @@ put(tf, 'The reported estimator is the defensible one: each sub-model gets its '
 put(tf, 'This is a real sensitivity, not a bug — and it is exactly why the '
         'recommendation is to report the side of 1 rather than the magnitude.',
     14.5, True, NAVY, space_after=0)
-pagenum(s, 17)
+pagenum(s, 18)
 
 prs.save(OUT)
 print(f'Saved {OUT}  ({os.path.getsize(OUT)/1024:.0f} kB, {len(prs.slides.__iter__.__self__._sldIdLst)} slides)')
