@@ -418,8 +418,8 @@ def stage_commonality():
     for src, col, new in [('regen_fit_and_test_paperIC.xlsx', 'fit_cost', 'fit_cost')]:
         if os.path.exists(src):
             df[new] = pd.read_excel(src).set_index('model')[col]
-    if os.path.exists('iterative_prediction.xlsx'):
-        c = pd.read_excel('iterative_prediction.xlsx', sheet_name='rmsep_by_k')
+    if os.path.exists('case_study_1_rolling.xlsx'):
+        c = pd.read_excel('case_study_1_rolling.xlsx', sheet_name='rmsep_by_k')
         c = c[(c.method == 'SO-PLS-offlineCal') & (c.regime == 'extrap')]
         df['roll_R2e'] = c.groupby('model').R2p.mean()
     df.to_excel('case_study_1_commonality.xlsx')
