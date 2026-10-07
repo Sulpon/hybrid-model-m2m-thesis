@@ -28,8 +28,8 @@ def main():
     M2 = CS.build_M2_A(CS.MODELS[MODEL], d, CS.FITTED_A[MODEL])
 
     qF, rf = CS.cv_3(X1, M2, X2, Y, CS.MAX_X1, CS.MAX_M2, CS.MAX_X2)
-    qKD = CS.cv_2(X1, M2, Y, CS.MAX_X1, CS.MAX_M2)
-    qDD = CS.cv_2(X1, X2, Y, CS.MAX_X1, CS.MAX_X2)
+    qKD, _ = CS.cv_2(X1, M2, Y, CS.MAX_X1, CS.MAX_M2)
+    qDD, _ = CS.cv_2(X1, X2, Y, CS.MAX_X1, CS.MAX_X2)
 
     # The two sub-models are re-optimised on their OWN grids -- the protocol the
     # reported table uses. (Letting them inherit the full model's allocation

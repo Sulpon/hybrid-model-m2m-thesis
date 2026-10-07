@@ -128,9 +128,18 @@ def _fit(X, Yv, n):
     return p, p.transform(X), p.y_loadings_, n
 
 
-def _sf(B):
+def _sf(B, block_scale=False):
+    """Column means and standard deviations, with a guard on near-constant
+    columns, plus the block-scaling divisor.
+
+    Block scaling (dividing by sqrt(K), K the number of columns) is needed
+    only where several blocks are combined into one super-score, i.e. MB-PLS.
+    SO-PLS fits each block separately, and a PLS model is invariant to a
+    constant rescaling of its predictor block -- the weights are unchanged and
+    the factor cancels between the scores and the response loading -- so it is
+    not applied there. Hence the default is off, and mb_concat requests it."""
     mu = B.mean(0); sd = B.std(0, ddof=1); sd[sd < 1e-12] = 1.0
-    return mu, sd, np.sqrt(B.shape[1])
+    return mu, sd, (np.sqrt(B.shape[1]) if block_scale else 1.0)
 
 
 def _sa(B, mu, sd, k):
@@ -143,23 +152,26 @@ def _rs(T, tgt):
 
 
 def cv_1(B, Y, m):
-    """Q2 curve for a single block."""
+    """Q2 curve for a single block, plus the per-fold RMSE grid."""
     cv = KFold(N_SPLITS, shuffle=True, random_state=SEED)
-    P = np.zeros((len(Y), m))
+    P = np.zeros((len(Y), m)); rf = np.zeros((N_SPLITS, m))
     for f, (tr, te) in enumerate(cv.split(Y)):
         mu, sd, k = _sf(B[tr]); bt, be = _sa(B[tr], mu, sd, k), _sa(B[te], mu, sd, k)
         muY, sdy = Y[tr].mean(0), Y[tr].std(0, ddof=1); Y0 = (Y[tr]-muY)/sdy
         p, T, Q, nf = _fit(bt, Y0, m); Te = p.transform(be)
         for a in range(1, m+1):
             ae = min(a, nf)
-            P[te, a-1] = ((Te[:, :ae] @ Q[:, :ae].T)*sdy + muY).ravel()
-    return 1 - ((P - Y.reshape(-1, 1))**2).sum(0)/np.sum((Y - Y.mean(0))**2)
+            yh = ((Te[:, :ae] @ Q[:, :ae].T)*sdy + muY).ravel()
+            P[te, a-1] = yh
+            rf[f, a-1] = np.sqrt(np.mean((yh - Y[te].ravel())**2))
+    q = 1 - ((P - Y.reshape(-1, 1))**2).sum(0)/np.sum((Y - Y.mean(0))**2)
+    return q, rf
 
 
 def cv_2(B1, B2, Y, m1, m2):
-    """Q2 surface for SO-PLS B1 -> B2."""
+    """Q2 surface for SO-PLS B1 -> B2, plus the per-fold RMSE cube."""
     cv = KFold(N_SPLITS, shuffle=True, random_state=SEED)
-    P = np.zeros((len(Y), m1, m2))
+    P = np.zeros((len(Y), m1, m2)); rf = np.zeros((N_SPLITS, m1, m2))
     for f, (tr, te) in enumerate(cv.split(Y)):
         mu1, sd1, k1 = _sf(B1[tr]); b1t, b1e = _sa(B1[tr], mu1, sd1, k1), _sa(B1[te], mu1, sd1, k1)
         mu2, sd2, k2 = _sf(B2[tr]); b2t0, b2e0 = _sa(B2[tr], mu2, sd2, k2), _sa(B2[te], mu2, sd2, k2)
@@ -173,8 +185,11 @@ def cv_2(B1, B2, Y, m1, m2):
             p2, T2t, Q2, bf = _fit(b2t, Ya, m2); T2e = p2.transform(b2e)
             for b in range(1, m2+1):
                 be = min(b, bf)
-                P[te, a-1, b-1] = ((yh_a + T2e[:, :be] @ Q2[:, :be].T)*sdy + muY).ravel()
-    return 1 - ((P - Y[:, :, None])**2).sum(0)/np.sum((Y - Y.mean(0))**2)
+                yh = ((yh_a + T2e[:, :be] @ Q2[:, :be].T)*sdy + muY).ravel()
+                P[te, a-1, b-1] = yh
+                rf[f, a-1, b-1] = np.sqrt(np.mean((yh - Y[te].ravel())**2))
+    q = 1 - ((P - Y[:, :, None])**2).sum(0)/np.sum((Y - Y.mean(0))**2)
+    return q, rf
 
 
 def cv_3(B1, B2, B3, Y, m1, m2, m3, B3scale=None):
@@ -273,7 +288,9 @@ def sopls_predict(mdl, S1, S2, S3):
 
 def mb_concat(B1, B2, B3, sc=None, B3scale=None):
     if sc is None:
-        sc = [_sf(B1), _sf(B2), _sf(B3scale if B3scale is not None else B3)]
+        # MB-PLS concatenates the blocks, so their relative widths matter here
+        sc = [_sf(B1, True), _sf(B2, True),
+              _sf(B3scale if B3scale is not None else B3, True)]
     return np.hstack([_sa(B, *s) for B, s in zip([B1, B2, B3], sc)]), sc
 
 
@@ -393,18 +410,26 @@ def stage_commonality():
     d = load_C('RG_calibration.xlsx')
     cache = json.load(open('regen_fitted_params_paperIC.json'))
     Y = d['Y']
-    qX1 = cv_1(d['X1'], Y, MAX_X1)
+    qX1, rfX1 = cv_1(d['X1'], Y, MAX_X1)
+    pX1, *_ = pick_1se(rfX1.mean(0), rfX1)
     rows = []
     for name, rhs in MODELS.items():
         M2, _ = build_M2_C(rhs, d, cache[name])
         qF, rf = cv_3(d['X1'], M2, d['X2'], Y, MAX_X1, MAX_M2, MAX_X2)
-        qKD = cv_2(d['X1'], M2, Y, MAX_X1, MAX_M2)          # X1 + M2
-        qDD = cv_2(d['X1'], d['X2'], Y, MAX_X1, MAX_X2)     # X1 + X2
+        qKD, rfKD = cv_2(d['X1'], M2, Y, MAX_X1, MAX_M2)          # X1 + M2
+        qDD, rfDD = cv_2(d['X1'], d['X2'], Y, MAX_X1, MAX_X2)     # X1 + X2
         pick, mask, rmin, se, _ = pick_1se(rf.mean(0), rf)
+        # Each reduced model is RE-OPTIMISED on its own grid rather than
+        # inheriting the full model's per-block counts. Inheriting makes the
+        # difference a measure of "this block at someone else's allocation"
+        # instead of what the block actually adds, and the sub-model
+        # allocation moves the ratio several times more than the full one.
+        pkd, *_ = pick_1se(rfKD.mean(0), rfKD)
+        pdd, *_ = pick_1se(rfDD.mean(0), rfDD)
         a, b, c = pick
-        uM = float(qF[pick] - qDD[a, c])
-        uX = float(qF[pick] - qKD[a, b])
-        joint = float(qF[pick] - qX1[a])
+        uM = float(qF[pick] - qDD[pdd])
+        uX = float(qF[pick] - qKD[pkd])
+        joint = float(qF[pick] - qX1[pX1])
         rows.append(dict(model=name, LV=f'({a+1},{b+1},{c+1})', n_1SE=int(mask.sum()),
                          Q2_full=float(qF[pick]), joint=joint, uM=uM, uX=uX,
                          shared=joint-uM-uX, ratio=uM/uX if uX > 1e-9 else np.nan,
@@ -453,10 +478,14 @@ def stage_flatregion():
         ratio_ss = np.transpose(ssM, (0, 2, 1))/ssX
 
         qF, rf = cv_3(X1, M2, X2, Y, MAX_X1, MAX_M2, MAX_X2)
-        qKD = cv_2(X1, M2, Y, MAX_X1, MAX_M2)
-        qDD = cv_2(X1, X2, Y, MAX_X1, MAX_X2)
-        uM_q = qF - qDD[:, None, :]; uX_q = qF - qKD[:, :, None]
+        qKD, rfKD = cv_2(X1, M2, Y, MAX_X1, MAX_M2)
+        qDD, rfDD = cv_2(X1, X2, Y, MAX_X1, MAX_X2)
+        # reduced models re-optimised once on their own grids (see stage_commonality)
+        pkd, *_ = pick_1se(rfKD.mean(0), rfKD)
+        pdd, *_ = pick_1se(rfDD.mean(0), rfDD)
+        q_kd, q_dd = float(qKD[pkd]), float(qDD[pdd])
         with np.errstate(divide='ignore', invalid='ignore'):
+            uM_q, uX_q = qF - q_dd, qF - q_kd
             ratio_q = np.where(uX_q > 1e-9, uM_q/uX_q, np.nan)
 
         rmse = rf.mean(0)

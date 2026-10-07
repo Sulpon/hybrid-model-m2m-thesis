@@ -267,9 +267,14 @@ def _fit(X, Yv, n):
     return p, p.transform(X), p.y_loadings_, n
 
 
-def _sf(B):
+def _sf(B, block_scale=False):
+    """Column means and standard deviations, with a guard on near-constant
+    columns, plus the block-scaling divisor. Only SO-PLS is used in this case
+    study, and PLS is invariant to a constant rescaling of a predictor block,
+    so block scaling is not applied. Kept as an option for consistency with
+    case_study_1, where MB-PLS does require it."""
     mu = B.mean(0); sd = B.std(0, ddof=1); sd[sd < 1e-12] = 1.0
-    return mu, sd, np.sqrt(B.shape[1])
+    return mu, sd, (np.sqrt(B.shape[1]) if block_scale else 1.0)
 
 
 def _sa(B, mu, sd, k):
@@ -306,17 +311,34 @@ def cv2(B1, B2, Y, m1, m2):
 
 
 def cv1(B, Y, m):
+    """Q2 curve for a single block, plus the per-fold RMSE grid."""
     cv = KFold(N_SPLITS, shuffle=True, random_state=CV_SEED)
-    P = np.zeros((len(Y), m))
+    P = np.zeros((len(Y), m)); rf = np.zeros((N_SPLITS, m))
     for f, (tr, te) in enumerate(cv.split(Y)):
         mu, sd, k = _sf(B[tr]); bt, be = _sa(B[tr], mu, sd, k), _sa(B[te], mu, sd, k)
         muY, sdy = Y[tr].mean(0), Y[tr].std(0, ddof=1); Y0 = (Y[tr]-muY)/sdy
         p, T, Q, nf = _fit(bt, Y0, m); Te = p.transform(be)
         for a in range(1, m+1):
             ae = min(a, nf)
-            P[te, a-1] = ((Te[:, :ae] @ Q[:, :ae].T)*sdy + muY).ravel()
+            yh = ((Te[:, :ae] @ Q[:, :ae].T)*sdy + muY).ravel()
+            P[te, a-1] = yh
+            rf[f, a-1] = np.sqrt(np.mean((yh - Y[te].ravel())**2))
     sst = np.sum((Y - Y.mean(0))**2)
-    return 1 - ((P - Y.reshape(-1, 1))**2).sum(0)/sst
+    return 1 - ((P - Y.reshape(-1, 1))**2).sum(0)/sst, rf
+
+
+def pick_1se(rmse, rf, k=1):
+    """Parsimony within the k-SE flat region; ties broken by lower RMSECV.
+    Identical rule to case_study_1.pick_1se, and valid for any number of
+    blocks (the grid's ndim sets the latent-variable count offset)."""
+    imin = np.unravel_index(rmse.argmin(), rmse.shape)
+    rmin = float(rmse[imin])
+    se = float(rf[(slice(None),) + imin].std(ddof=1)/np.sqrt(N_SPLITS))
+    mask = rmse <= rmin + k*se
+    idx = np.argwhere(mask); tot = idx.sum(1) + rmse.ndim
+    cand = idx[tot == tot.min()]
+    pick = tuple(cand[np.array([rmse[tuple(u)] for u in cand]).argmin()])
+    return pick, mask, rmin, se, imin
 
 
 def seq_ss(B1, B2, Y, n1, n2):
@@ -335,21 +357,21 @@ def seq_ss(B1, B2, Y, n1, n2):
 def analyse(Mb, Xb, Y):
     """Parsimony-within-1-SE allocation, then both ratios at that allocation."""
     qF, rf = cv2(Mb, Xb, Y, MAX_M, MAX_X)
-    qM, qX = cv1(Mb, Y, MAX_M), cv1(Xb, Y, MAX_X)
-    rmse = rf.mean(0)
-    i = np.unravel_index(rmse.argmin(), rmse.shape)
-    se = float(rf[:, i[0], i[1]].std(ddof=1)/np.sqrt(N_SPLITS))
-    mask = rmse <= rmse[i] + se
-    idx = np.argwhere(mask); tot = idx.sum(1) + 2
-    cand = idx[tot == tot.min()]
-    pick = tuple(cand[np.array([rmse[tuple(u)] for u in cand]).argmin()])
+    qM, rfM = cv1(Mb, Y, MAX_M)
+    qX, rfX = cv1(Xb, Y, MAX_X)
+    pick, mask, rmin, se, i = pick_1se(rf.mean(0), rf)
+    # Each reduced model is RE-OPTIMISED on its own grid rather than inheriting
+    # the full model's per-block counts -- same protocol as case study 1.
+    pM, *_ = pick_1se(rfM.mean(0), rfM)
+    pX, *_ = pick_1se(rfX.mean(0), rfX)
     a, b = pick[0]+1, pick[1]+1
     ss_m, ss_x, _, sst = seq_ss(Mb, Xb, Y, a, b)
     joint = float(qF[pick])
-    uM = joint - float(qX[pick[1]])
-    uX = joint - float(qM[pick[0]])
-    return dict(LV_M=a, LV_X=b, n1SE=int(mask.sum()), RMSECV=float(rmse[i]),
-                Q2_full=joint, Q2_M=float(qM[pick[0]]), Q2_X=float(qX[pick[1]]),
+    uM = joint - float(qX[pX])
+    uX = joint - float(qM[pM])
+    return dict(LV_M=a, LV_X=b, LV_M_sub=int(pM[0])+1, LV_X_sub=int(pX[0])+1,
+                n1SE=int(mask.sum()), RMSECV=rmin,
+                Q2_full=joint, Q2_M=float(qM[pM]), Q2_X=float(qX[pX]),
                 SS_M=ss_m, SS_X=ss_x, SST=sst,
                 M2M_conv=ss_m/ss_x if ss_x > 1e-12 else np.inf,
                 uM=uM, uX=uX, shared=joint - uM - uX,
